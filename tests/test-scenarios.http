@@ -1,0 +1,290 @@
+### ==============================================================================
+### TEST SCENARIOS ZERO TRUST SECURITY (NIST SP 800-207)
+### Ekstensi VS Code: REST Client (Klik tombol 'Send Request' di atas baris URL)
+###
+### 📌 PANDUAN SIMBOL:
+### ✅ [BERHASIL] = Request diizinkan oleh sistem (Status: 200 OK)
+### ❌ [GAGAL]    = Request DITOLAK oleh Zero Trust (Status: 403 Forbidden / 401)
+### ==============================================================================
+
+@gateway_url = http://localhost:3000
+@nilai_url = http://localhost:3001
+@transkrip_url = http://localhost:3002
+
+### ==============================================================================
+### 1. AUTENTIKASI & VERIFIKASI KONTEKS DEVICE ID (Bagian 4.1 & 4.3)
+### ==============================================================================
+
+### ✅ 1.1 [BERHASIL] Login Dosen 1 (Kredensial & Device Sah -> 200 OK)
+# @name loginDosen1
+POST {{gateway_url}}/auth/login
+Content-Type: application/json
+X-Device-ID: DEV-DOSEN-1
+
+{
+  "username": "dosen1",
+  "password": "dosen123"
+}
+
+### Variabel otomatis menyimpan token Dosen 1
+@token_dosen1 = {{loginDosen1.response.body.access_token}}
+@refresh_dosen1 = {{loginDosen1.response.body.refresh_token}}
+
+
+### ❌ 1.2 [GAGAL] Login Dosen 1 Menggunakan Device Tidak Terdaftar (-> 403 Forbidden)
+# Alasan Ditolak: Device 'DEV-HACKER-ATTACKER' tidak terikat dengan akun dosen1
+POST {{gateway_url}}/auth/login
+Content-Type: application/json
+X-Device-ID: DEV-HACKER-ATTACKER
+
+{
+  "username": "dosen1",
+  "password": "dosen123"
+}
+
+
+### ❌ 1.3 [GAGAL] Login Dosen 1 dengan Password Salah (-> 401 Unauthorized)
+# Alasan Ditolak: Kredensial username atau password tidak valid
+POST {{gateway_url}}/auth/login
+Content-Type: application/json
+X-Device-ID: DEV-DOSEN-1
+
+{
+  "username": "dosen1",
+  "password": "passwordsalah123"
+}
+
+
+### ✅ 1.4 [BERHASIL] Login Mahasiswa 1 (Device Sah -> 200 OK)
+# @name loginMhs1
+POST {{gateway_url}}/auth/login
+Content-Type: application/json
+X-Device-ID: DEV-MHS-1
+
+{
+  "username": "mhs1",
+  "password": "mhs123"
+}
+
+###
+@token_mhs1 = {{loginMhs1.response.body.access_token}}
+
+
+### ✅ 1.5 [BERHASIL] Login Dosen 2 (Device Sah -> 200 OK)
+# @name loginDosen2
+POST {{gateway_url}}/auth/login
+Content-Type: application/json
+X-Device-ID: DEV-DOSEN-2
+
+{
+  "username": "dosen2",
+  "password": "dosen123"
+}
+
+###
+@token_dosen2 = {{loginDosen2.response.body.access_token}}
+
+
+### ✅ 1.6 [BERHASIL] Login Admin (Device Sah -> 200 OK)
+# @name loginAdmin
+POST {{gateway_url}}/auth/login
+Content-Type: application/json
+X-Device-ID: DEV-ADMIN-1
+
+{
+  "username": "admin1",
+  "password": "admin123"
+}
+
+###
+@token_admin = {{loginAdmin.response.body.access_token}}
+
+
+### ==============================================================================
+### 2. VERIFIKASI KONTEKS DEVICE PADA REQUEST API (Bagian 4.3)
+### ==============================================================================
+
+### ❌ 2.1 [GAGAL] Request Tanpa Membawa Header X-Device-ID (-> 403 Forbidden)
+# Alasan Ditolak: Setiap request user wajib memvalidasi konteks identitas device
+GET {{gateway_url}}/nilai
+Authorization: Bearer {{token_mhs1}}
+
+
+### ❌ 2.2 [GAGAL] Mahasiswa 1 Memakai Device ID Milik Dosen 1 (-> 403 Forbidden)
+# Alasan Ditolak: Device 'DEV-DOSEN-1' bukan milik user 'mhs1'
+GET {{gateway_url}}/nilai
+Authorization: Bearer {{token_mhs1}}
+X-Device-ID: DEV-DOSEN-1
+
+
+### ✅ 2.3 [BERHASIL] Mahasiswa 1 Melihat Nilai dengan Device Sendiri (-> 200 OK)
+# Alasan Diterima: Device cocok dengan akun mahasiswa 1
+GET {{gateway_url}}/nilai
+Authorization: Bearer {{token_mhs1}}
+X-Device-ID: DEV-MHS-1
+
+
+### ==============================================================================
+### 3. KEBIJAKAN AKSES: ABAC KEPEMILIKAN DATA & JAM AKSES (Bagian 4.2 & 4.3)
+### ==============================================================================
+
+### ❌ 3.1 [GAGAL] Dosen 2 Mencoba Edit Nilai Kelas Milik Dosen 1 (-> 403 Forbidden)
+# Alasan Ditolak: Dosen 2 bukan dosen pengampu untuk kelas ini (Prinsip Least Privilege)
+PUT {{gateway_url}}/nilai/1
+Authorization: Bearer {{token_dosen2}}
+X-Device-ID: DEV-DOSEN-2
+Content-Type: application/json
+
+{
+  "nilai_angka": 95,
+  "nilai_huruf": "A"
+}
+
+
+### ❌ 3.2 [GAGAL] Dosen 1 Edit Nilai Di Luar Jam Akses Operasional (-> 403 Forbidden)
+# Alasan Ditolak: Perubahan nilai hanya boleh pukul 07.00 - 21.00 (Simulasi jam 23.00 malam)
+PUT {{gateway_url}}/nilai/1
+Authorization: Bearer {{token_dosen1}}
+X-Device-ID: DEV-DOSEN-1
+X-Simulate-Hour: 23
+Content-Type: application/json
+
+{
+  "nilai_angka": 90,
+  "nilai_huruf": "A"
+}
+
+
+### ✅ 3.3 [BERHASIL] Dosen 1 Edit Nilai Kelas Sendiri Dalam Jam Akses (-> 200 OK)
+# Alasan Diterima: Dosen pengampu sah dan berada dalam jam operasional
+PUT {{gateway_url}}/nilai/1
+Authorization: Bearer {{token_dosen1}}
+X-Device-ID: DEV-DOSEN-1
+Content-Type: application/json
+
+{
+  "nilai_angka": 90,
+  "nilai_huruf": "A"
+}
+
+
+### ✅ 3.4 [BERHASIL] Mahasiswa 1 Melihat Transkrip NIM Miliknya Sendiri (-> 200 OK)
+# Alasan Diterima: Mahasiswa berhak melihat transkrip NIM sendiri (22001)
+GET {{gateway_url}}/transkrip/22001
+Authorization: Bearer {{token_mhs1}}
+X-Device-ID: DEV-MHS-1
+
+
+### ❌ 3.5 [GAGAL] Mahasiswa 1 Mencoba Mengintip Transkrip Mahasiswa 2 (-> 403 Forbidden)
+# Alasan Ditolak: Mahasiswa dilarang melihat transkrip mahasiswa lain (NIM 22002)
+GET {{gateway_url}}/transkrip/22002
+Authorization: Bearer {{token_mhs1}}
+X-Device-ID: DEV-MHS-1
+
+
+### ✅ 3.6 [BERHASIL] Admin Melihat Transkrip Mahasiswa Siapa Saja (-> 200 OK)
+# Alasan Diterima: Role Admin berhak melihat transkrip semua mahasiswa
+GET {{gateway_url}}/transkrip/22002
+Authorization: Bearer {{token_admin}}
+X-Device-ID: DEV-ADMIN-1
+
+
+### ==============================================================================
+### 4. FINALISASI & PANGGILAN ANTAR-SERVICE M2M (Bagian 4.1 & 4.2)
+### ==============================================================================
+
+### ❌ 4.1 [GAGAL] User Biasa Tembak Langsung Endpoint Sinkron Transkrip (-> 403 Forbidden)
+# Alasan Ditolak: Endpoint ini khusus sinkronisasi internal, wajib token role 'service'
+POST {{gateway_url}}/transkrip/sinkron
+Authorization: Bearer {{token_dosen1}}
+X-Device-ID: DEV-DOSEN-1
+Content-Type: application/json
+
+{
+  "kelas_id": 1,
+  "data_nilai": []
+}
+
+
+### ✅ 4.2 [BERHASIL] Dosen 1 Finalisasi Kelas (Memicu M2M Sinkronisasi Transkrip -> 200 OK)
+# Alasan Diterima: Dosen pengampu sah, memicu Service Nilai meminta token service ke Gateway
+POST {{gateway_url}}/kelas/1/finalisasi
+Authorization: Bearer {{token_dosen1}}
+X-Device-ID: DEV-DOSEN-1
+
+
+### ❌ 4.3 [GAGAL] Dosen Coba Edit Nilai pada Kelas yang Sudah Final (-> 403 Forbidden)
+# Alasan Ditolak: Kelas telah difinalisasi, nilai terkunci dan tidak dapat diubah lagi
+PUT {{gateway_url}}/nilai/1
+Authorization: Bearer {{token_dosen1}}
+X-Device-ID: DEV-DOSEN-1
+Content-Type: application/json
+
+{
+  "nilai_angka": 100,
+  "nilai_huruf": "A"
+}
+
+
+### ==============================================================================
+### 5. DEFENSE IN DEPTH: BYPASS GATEWAY DITOLAK (Bagian 4.1 Assume Breach)
+### ==============================================================================
+
+### ❌ 5.1 [GAGAL] Penyerang Bypass Langsung ke Service Nilai Port 3001 (-> 403 Forbidden)
+# Alasan Ditolak: Akses langsung tanpa melalui Gateway (tanpa header X-Gateway-Secret)
+GET {{nilai_url}}/nilai
+Authorization: Bearer {{token_mhs1}}
+
+
+### ❌ 5.2 [GAGAL] Penyerang Bypass Langsung ke Service Transkrip Port 3002 (-> 403 Forbidden)
+# Alasan Ditolak: Akses langsung tanpa melalui Gateway diblokir oleh service internal
+GET {{transkrip_url}}/transkrip/22001
+Authorization: Bearer {{token_mhs1}}
+
+
+### ❌ 5.3 [GAGAL] Bawa Gateway Secret Tetapi Token JWT Palsu ke Port 3001 (-> 401 Unauthorized)
+# Alasan Ditolak: Service internal tetap memverifikasi ulang JWT (Defense in Depth)
+GET {{nilai_url}}/nilai
+X-Gateway-Secret: zt-gateway-super-secret-key-2026
+Authorization: Bearer token-jwt-palsu-ngawur
+
+
+### ==============================================================================
+### 6. REFRESH TOKEN & LOGOUT REVOCATION (Bagian 4.1)
+### ==============================================================================
+
+### ✅ 6.1 [BERHASIL] Perbarui Access Token Menggunakan Refresh Token Valid (-> 200 OK)
+POST {{gateway_url}}/auth/refresh
+Content-Type: application/json
+
+{
+  "refresh_token": "{{refresh_dosen1}}"
+}
+
+
+### ✅ 6.2 [BERHASIL] Logout Dosen 1 (Mencabut Refresh Token di Database -> 200 OK)
+POST {{gateway_url}}/auth/logout
+Content-Type: application/json
+
+{
+  "refresh_token": "{{refresh_dosen1}}"
+}
+
+
+### ❌ 6.3 [GAGAL] Menggunakan Refresh Token yang Telah Dicabut (-> 403 Forbidden)
+# Alasan Ditolak: Token sudah dicabut (revoked = 1) saat logout
+POST {{gateway_url}}/auth/refresh
+Content-Type: application/json
+
+{
+  "refresh_token": "{{refresh_dosen1}}"
+}
+
+
+### ==============================================================================
+### 7. AUDIT LOG CENTRALIZED DI API GATEWAY (Bagian 4.4)
+### ==============================================================================
+
+### ✅ 7.1 [BERHASIL] Melihat Riwayat Keputusan ALLOW dan DENY di Gateway (-> 200 OK)
+# Menampilkan seluruh riwayat: waktu, subjek, endpoint, device, keputusan, & alasan
+GET {{gateway_url}}/audit-logs

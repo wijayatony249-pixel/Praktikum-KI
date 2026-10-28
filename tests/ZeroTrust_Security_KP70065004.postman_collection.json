@@ -1,0 +1,426 @@
+{
+  "info": {
+    "name": "Zero Trust Security - Sistem Nilai (NIST SP 800-207)",
+    "description": "Koleksi Postman untuk pengujian praktikum Zero Trust Security: API Gateway (3000), Service Nilai (3001), dan Service Transkrip (3002).",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "gateway_url", "value": "http://localhost:3000" },
+    { "key": "nilai_url", "value": "http://localhost:3001" },
+    { "key": "transkrip_url", "value": "http://localhost:3002" },
+    { "key": "token_dosen1", "value": "" },
+    { "key": "refresh_dosen1", "value": "" },
+    { "key": "token_dosen2", "value": "" },
+    { "key": "token_mhs1", "value": "" },
+    { "key": "token_admin", "value": "" },
+    { "key": "gateway_secret", "value": "zt-gateway-super-secret-key-2026" }
+  ],
+  "item": [
+    {
+      "name": "1. Autentikasi & Verifikasi Konteks (Device ID)",
+      "item": [
+        {
+          "name": "1.1 Login Dosen 1 (Device Sah - 200 OK)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var jsonData = pm.response.json();",
+                  "if (jsonData.access_token) {",
+                  "    pm.collectionVariables.set('token_dosen1', jsonData.access_token);",
+                  "    pm.collectionVariables.set('refresh_dosen1', jsonData.refresh_token);",
+                  "}",
+                  "pm.test('Status code is 200', function () { pm.response.to.have.status(200); });"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "X-Device-ID", "value": "DEV-DOSEN-1" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"dosen1\",\n  \"password\": \"dosen123\"\n}"
+            },
+            "url": { "raw": "{{gateway_url}}/auth/login", "host": ["{{gateway_url}}"], "path": ["auth", "login"] }
+          }
+        },
+        {
+          "name": "1.2 Login Dosen 1 (Device Tidak Terdaftar - 403 Forbidden)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "X-Device-ID", "value": "DEV-HACKER-ATTACKER" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"dosen1\",\n  \"password\": \"dosen123\"\n}"
+            },
+            "url": { "raw": "{{gateway_url}}/auth/login", "host": ["{{gateway_url}}"], "path": ["auth", "login"] }
+          }
+        },
+        {
+          "name": "1.3 Login Mahasiswa 1 (Device Sah - 200 OK)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var jsonData = pm.response.json();",
+                  "if (jsonData.access_token) {",
+                  "    pm.collectionVariables.set('token_mhs1', jsonData.access_token);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "X-Device-ID", "value": "DEV-MHS-1" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"mhs1\",\n  \"password\": \"mhs123\"\n}"
+            },
+            "url": { "raw": "{{gateway_url}}/auth/login", "host": ["{{gateway_url}}"], "path": ["auth", "login"] }
+          }
+        },
+        {
+          "name": "1.4 Login Dosen 2 (Device Sah - 200 OK)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var jsonData = pm.response.json();",
+                  "if (jsonData.access_token) {",
+                  "    pm.collectionVariables.set('token_dosen2', jsonData.access_token);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "X-Device-ID", "value": "DEV-DOSEN-2" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"dosen2\",\n  \"password\": \"dosen123\"\n}"
+            },
+            "url": { "raw": "{{gateway_url}}/auth/login", "host": ["{{gateway_url}}"], "path": ["auth", "login"] }
+          }
+        },
+        {
+          "name": "1.5 Login Admin (Device Sah - 200 OK)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var jsonData = pm.response.json();",
+                  "if (jsonData.access_token) {",
+                  "    pm.collectionVariables.set('token_admin', jsonData.access_token);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "X-Device-ID", "value": "DEV-ADMIN-1" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"admin1\",\n  \"password\": \"admin123\"\n}"
+            },
+            "url": { "raw": "{{gateway_url}}/auth/login", "host": ["{{gateway_url}}"], "path": ["auth", "login"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "2. Verifikasi Header Device pada Request API",
+      "item": [
+        {
+          "name": "2.1 Request Tanpa Header X-Device-ID (403 Forbidden)",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token_mhs1}}" }
+            ],
+            "url": { "raw": "{{gateway_url}}/nilai", "host": ["{{gateway_url}}"], "path": ["nilai"] }
+          }
+        },
+        {
+          "name": "2.2 Mahasiswa 1 Menggunakan Device ID Orang Lain (403 Forbidden)",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token_mhs1}}" },
+              { "key": "X-Device-ID", "value": "DEV-DOSEN-1" }
+            ],
+            "url": { "raw": "{{gateway_url}}/nilai", "host": ["{{gateway_url}}"], "path": ["nilai"] }
+          }
+        },
+        {
+          "name": "2.3 Mahasiswa 1 Melihat Nilai Sendiri (Device Valid - 200 OK)",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token_mhs1}}" },
+              { "key": "X-Device-ID", "value": "DEV-MHS-1" }
+            ],
+            "url": { "raw": "{{gateway_url}}/nilai", "host": ["{{gateway_url}}"], "path": ["nilai"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "3. Kebijakan Akses (ABAC, Kepemilikan Data, Jam Akses)",
+      "item": [
+        {
+          "name": "3.1 Dosen 2 Edit Nilai Kelas Dosen 1 (Bukan Pengampu - 403 Forbidden)",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token_dosen2}}" },
+              { "key": "X-Device-ID", "value": "DEV-DOSEN-2" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nilai_angka\": 95,\n  \"nilai_huruf\": \"A\"\n}"
+            },
+            "url": { "raw": "{{gateway_url}}/nilai/1", "host": ["{{gateway_url}}"], "path": ["nilai", "1"] }
+          }
+        },
+        {
+          "name": "3.2 Dosen 1 Edit Nilai Di Luar Jam Akses (Simulasi 23.00 - 403 Forbidden)",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token_dosen1}}" },
+              { "key": "X-Device-ID", "value": "DEV-DOSEN-1" },
+              { "key": "X-Simulate-Hour", "value": "23" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nilai_angka\": 90,\n  \"nilai_huruf\": \"A\"\n}"
+            },
+            "url": { "raw": "{{gateway_url}}/nilai/1", "host": ["{{gateway_url}}"], "path": ["nilai", "1"] }
+          }
+        },
+        {
+          "name": "3.3 Dosen 1 Edit Nilai Kelas Sendiri Dalam Jam Akses (200 OK)",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token_dosen1}}" },
+              { "key": "X-Device-ID", "value": "DEV-DOSEN-1" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nilai_angka\": 90,\n  \"nilai_huruf\": \"A\"\n}"
+            },
+            "url": { "raw": "{{gateway_url}}/nilai/1", "host": ["{{gateway_url}}"], "path": ["nilai", "1"] }
+          }
+        },
+        {
+          "name": "3.4 Mahasiswa 1 Melihat Transkrip Sendiri (22001 - 200 OK)",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token_mhs1}}" },
+              { "key": "X-Device-ID", "value": "DEV-MHS-1" }
+            ],
+            "url": { "raw": "{{gateway_url}}/transkrip/22001", "host": ["{{gateway_url}}"], "path": ["transkrip", "22001"] }
+          }
+        },
+        {
+          "name": "3.5 Mahasiswa 1 Intip Transkrip Mahasiswa 2 (22002 - 403 Forbidden)",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token_mhs1}}" },
+              { "key": "X-Device-ID", "value": "DEV-MHS-1" }
+            ],
+            "url": { "raw": "{{gateway_url}}/transkrip/22002", "host": ["{{gateway_url}}"], "path": ["transkrip", "22002"] }
+          }
+        },
+        {
+          "name": "3.6 Admin Melihat Transkrip Mahasiswa Siapa Saja (22002 - 200 OK)",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token_admin}}" },
+              { "key": "X-Device-ID", "value": "DEV-ADMIN-1" }
+            ],
+            "url": { "raw": "{{gateway_url}}/transkrip/22002", "host": ["{{gateway_url}}"], "path": ["transkrip", "22002"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "4. Finalisasi & Panggilan Antar-Service (M2M)",
+      "item": [
+        {
+          "name": "4.1 User Biasa Tembak Endpoint Sinkron (403 Forbidden)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token_dosen1}}" },
+              { "key": "X-Device-ID", "value": "DEV-DOSEN-1" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"kelas_id\": 1,\n  \"data_nilai\": []\n}"
+            },
+            "url": { "raw": "{{gateway_url}}/transkrip/sinkron", "host": ["{{gateway_url}}"], "path": ["transkrip", "sinkron"] }
+          }
+        },
+        {
+          "name": "4.2 Dosen 1 Finalisasi Kelas (Memicu M2M Sinkron Transkrip - 200 OK)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token_dosen1}}" },
+              { "key": "X-Device-ID", "value": "DEV-DOSEN-1" }
+            ],
+            "url": { "raw": "{{gateway_url}}/kelas/1/finalisasi", "host": ["{{gateway_url}}"], "path": ["kelas", "1", "finalisasi"] }
+          }
+        },
+        {
+          "name": "4.3 Dosen Coba Edit Nilai Kelas yang Sudah Final (403 Forbidden)",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token_dosen1}}" },
+              { "key": "X-Device-ID", "value": "DEV-DOSEN-1" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nilai_angka\": 100,\n  \"nilai_huruf\": \"A\"\n}"
+            },
+            "url": { "raw": "{{gateway_url}}/nilai/1", "host": ["{{gateway_url}}"], "path": ["nilai", "1"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "5. Defense in Depth (Bypass Gateway Ditolak)",
+      "item": [
+        {
+          "name": "5.1 Bypass Langsung ke Service Nilai Port 3001 (403 Forbidden)",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token_mhs1}}" }
+            ],
+            "url": { "raw": "{{nilai_url}}/nilai", "host": ["{{nilai_url}}"], "path": ["nilai"] }
+          }
+        },
+        {
+          "name": "5.2 Bypass Langsung ke Service Transkrip Port 3002 (403 Forbidden)",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token_mhs1}}" }
+            ],
+            "url": { "raw": "{{transkrip_url}}/transkrip/22001", "host": ["{{transkrip_url}}"], "path": ["transkrip", "22001"] }
+          }
+        },
+        {
+          "name": "5.3 Bawa Gateway Secret Tapi Token Palsu ke Port 3001 (401 Unauthorized)",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "X-Gateway-Secret", "value": "{{gateway_secret}}" },
+              { "key": "Authorization", "value": "Bearer token-palsu-ngawur" }
+            ],
+            "url": { "raw": "{{nilai_url}}/nilai", "host": ["{{nilai_url}}"], "path": ["nilai"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "6. Refresh Token & Logout Revocation",
+      "item": [
+        {
+          "name": "6.1 Perbarui Token via Refresh Token (200 OK)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"refresh_token\": \"{{refresh_dosen1}}\"\n}"
+            },
+            "url": { "raw": "{{gateway_url}}/auth/refresh", "host": ["{{gateway_url}}"], "path": ["auth", "refresh"] }
+          }
+        },
+        {
+          "name": "6.2 Logout Dosen 1 (Cabut Refresh Token - 200 OK)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"refresh_token\": \"{{refresh_dosen1}}\"\n}"
+            },
+            "url": { "raw": "{{gateway_url}}/auth/logout", "host": ["{{gateway_url}}"], "path": ["auth", "logout"] }
+          }
+        },
+        {
+          "name": "6.3 Refresh Token yang Sudah Dicabut Ditolak (403 Forbidden)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"refresh_token\": \"{{refresh_dosen1}}\"\n}"
+            },
+            "url": { "raw": "{{gateway_url}}/auth/refresh", "host": ["{{gateway_url}}"], "path": ["auth", "refresh"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "7. Audit Log Gateway (PEP)",
+      "item": [
+        {
+          "name": "7.1 Lihat Catatan Audit Log Gateway (200 OK)",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{gateway_url}}/audit-logs", "host": ["{{gateway_url}}"], "path": ["audit-logs"] }
+          }
+        }
+      ]
+    }
+  ]
+}
+

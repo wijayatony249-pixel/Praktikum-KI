@@ -1,0 +1,22 @@
+{
+  "name": "zero-trust-system",
+  "version": "1.0.0",
+  "description": "Zero Trust Security Implementation for Academic Grading System - NIST SP 800-207",
+  "main": "gateway/server.js",
+  "scripts": {
+    "seed": "node database/seed.js",
+    "gateway": "node gateway/server.js",
+    "nilai": "node service-nilai/server.js",
+    "transkrip": "node service-transkrip/server.js",
+    "start": "node run-all.js",
+    "dev": "node run-all.js",
+    "test": "node tests/test-runner.js"
+  },
+  "dependencies": {
+    "better-sqlite3": "^13.0.3",
+    "dotenv": "^16.4.7",
+    "express": "^4.21.2",
+    "http-proxy-middleware": "^3.0.3",
+    "jsonwebtoken": "^9.0.2"
+  }
+}
