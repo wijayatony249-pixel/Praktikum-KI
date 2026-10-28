@@ -1,3 +1,6 @@
+# Environment variables (JANGAN di-push ke publik)
+.env
+
 # Dependencies
 node_modules/
 
